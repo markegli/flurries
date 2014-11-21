@@ -160,6 +160,10 @@ void keyPressed() {
   {
     editFlake.savePDF("flurry" + saveId + "-" + (++saveVal) + ".pdf");
   }
+  else if (key == 's' || key == 'S')
+  {
+    editFlake.saveSVG("flurry" + saveId + "-" + (++saveVal) + ".svg");
+  }
   else if (key == 'm' || key == 'M') // mirror
   {
     reflect = !reflect;

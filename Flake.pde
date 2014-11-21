@@ -3,6 +3,11 @@ class Flake {
   Vector<Poly> subShapes;
   
   private Area flakeArea;
+  private Vector<Poly> areaShapes;
+  
+  private ArrayList<double[]> areaPoints;
+  private ArrayList<Line2D.Double> areaSegments;
+  private double[] coords = new double[6];
   
   Flake()
   {
@@ -60,33 +65,11 @@ class Flake {
     {
       flakeArea.add(rotateArea.createTransformedArea(AffineTransform.getRotateInstance(2.0d * PI * i / rotations)));
     }
-  }
-  
-  void saveOutline(String fileName)
-  {
-    // do the work to make the Area!!!
-    calcArea();
-    if (flakeArea == null) return;
     
-    pushMatrix();
-    resetMatrix();
+    areaShapes = new Vector<Poly>();
 
-    beginRecord(PDF, fileName);
-    translate(width/2,height/2);
-
-    background(255);
-    noFill();
-    stroke(0);
-    strokeWeight(1);
-    
-    //noStroke();
-    //fill(0);
-    
-    //this.draw();
-    
-    ArrayList<double[]> areaPoints = new ArrayList<double[]>();
-    ArrayList<Line2D.Double> areaSegments = new ArrayList<Line2D.Double>();
-    double[] coords = new double[6];
+    areaPoints = new ArrayList<double[]>();
+    coords = new double[6];
     
     for (PathIterator pi = flakeArea.getPathIterator(null); !pi.isDone(); pi.next()) {
         // The type will be SEG_LINETO, SEG_MOVETO, or SEG_CLOSE
@@ -98,43 +81,49 @@ class Flake {
     }
     
     double[] start = new double[3]; // To record where each polygon starts
+    Poly currentShape = null;
     
     for (int i = 0; i < areaPoints.size(); i++) {
-        // If we're not on the last point, return a line from this point to the next
-        double[] currentElement = areaPoints.get(i);
-    
-        // We need a default value in case we've reached the end of the ArrayList
-        double[] nextElement = {-1, -1, -1};
-        if (i < areaPoints.size() - 1) {
-            nextElement = areaPoints.get(i + 1);
-        }
-    
-        // Make the lines
-        if (currentElement[0] == PathIterator.SEG_MOVETO) {
-            start = currentElement; // Record where the polygon started to close it later
-        } 
-    
-        if (nextElement[0] == PathIterator.SEG_LINETO) {
-            areaSegments.add(
-                    new Line2D.Double(
-                        currentElement[1], currentElement[2],
-                        nextElement[1], nextElement[2]
-                    )
-                );
-        } else if (nextElement[0] == PathIterator.SEG_CLOSE) {
-            areaSegments.add(
-                    new Line2D.Double(
-                        currentElement[1], currentElement[2],
-                        start[1], start[2]
-                    )
-                );
-        }
+      double[] currentElement = areaPoints.get(i);
+
+      // Make the lines
+      if (currentElement[0] == PathIterator.SEG_MOVETO) {
+        currentShape = new Poly();
+        currentShape.add(new Point(currentElement[1], currentElement[2]));
+      } 
+  
+      if (currentElement[0] == PathIterator.SEG_LINETO) {
+        currentShape.add(new Point(currentElement[1], currentElement[2]));
+      }
+      else if (currentElement[0] == PathIterator.SEG_CLOSE) {
+        areaShapes.add(currentShape);
+        currentShape = null;
+      }
     }
+  }
+  
+  void saveOutline(String fileName)
+  {
+    // do the work to make the Area!!!
+    calcArea();
+    if (flakeArea == null) return;
     
-    // areaSegments now contains all the line segments
-    for(Line2D.Double line : areaSegments)
+    pushMatrix();
+    resetMatrix();
+
+    background(255);
+
+    beginRecord(PDF, fileName);
+    translate(width/2,height/2);
+
+    noFill();
+    stroke(0);
+    strokeWeight(1);
+    
+    // draw all the line segments
+    for(Poly areaShape : areaShapes)
     {
-      line((float)line.x1,(float)line.y1,(float)line.x2,(float)line.y2);
+      areaShape.draw();
     }
     
     endRecord();
@@ -159,21 +148,29 @@ class Flake {
     popMatrix();
   }
   
-  /*
-  public void exportSVG(Vector<Point> points) {
+  public void saveSVG(String fileName) {
+    calcArea();
+    if (flakeArea == null) return;
+    
     String svg = "<?xml version=\"1.0\" standalone=\"yes\"?>";
     svg += "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">";
-    svg += "<svg width=\"640px\" height=\"640px\" xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\"><path d=\"";
-    svg += "M"+points.get(0).x+","+points.get(0).y+" ";
-    for(int i = 0; i < points.size(); i++) {
-       svg += "L"+points.get((i+1)%points.size()).x+","+points.get((i+1)%points.size()).y;
+    svg += "<svg width=\"" + width + "px\" height=\"" + height + "px\" xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\">";
+    for(Poly areaShape : areaShapes)
+    {
+      if (areaShape.points.size() == 0) continue;
+      
+      svg += "<path d=\"";
+      svg += "M"+areaShape.points.get(0).x+","+areaShape.points.get(0).y+" ";
+      for(Point areaPoint : areaShape.points) {
+         svg += "L"+areaPoint.x+","+areaPoint.y;
+      }
+      svg += "Z";
+      
+      svg += "\" stroke=\"#000\" fill-opacity=\"0\" transform=\"translate(" + (width / 2.0) + "," + (height / 2.0) + ")\" />";
     }
-    svg += "Z";
-    
-    svg += "\" stroke=\"#000\" fill=\"#000\" transform=\"translate(320,320)\" /></svg>";
+    svg +="</svg>";
     //var blob = new Blob([svg], {type: "text/plain;charset=utf-8"});
     //saveAs(blob, "snowflake.svg");
-    saveStrings("flurry" + saveId + "-" + (++saveVal) + ".svg", new String[] { svg });
+    saveStrings(fileName, new String[] { svg });
   }
-  */
 }
