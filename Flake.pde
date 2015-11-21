@@ -1,6 +1,6 @@
 class Flake {
-  Vector<Poly> addShapes;
-  Vector<Poly> subShapes;
+  Stack<Poly> addShapes;
+  Stack<Poly> redoShapes;
   
   private Area flakeArea;
   private Vector<Poly> areaShapes;
@@ -8,20 +8,45 @@ class Flake {
   private ArrayList<double[]> areaPoints;
   private double[] coords = new double[6];
   
-  Flake()
-  {
-    addShapes = new Vector<Poly>();
-    subShapes = new Vector<Poly>();
+  Flake() {
+    addShapes = new Stack<Poly>();
+    redoShapes = new Stack<Poly>();
   }
   
-  void addShape(Poly add)
-  {
-    addShapes.add(add);
+  void addShape(Poly add) {
+    addShapes.push(add);
+    redoShapes.clear();
   }
   
-  void subShape(Poly sub)
-  {
-    subShapes.add(sub);
+  void addFlake(Flake otherFlake) {
+    addShapes.addAll(otherFlake.addShapes);
+    redoShapes.clear();
+  }
+  
+  boolean isEmpty() {
+    return addShapes.size() == 0;
+  }
+  
+  boolean undo() {
+    if (isEmpty()) {
+      return false;
+    }
+    
+    redoShapes.push(addShapes.pop());
+    return true;
+  }
+  
+  boolean redo() {
+    if (redoShapes.size() == 0) {
+      return false;
+    }
+    
+    addShapes.push(redoShapes.pop());
+    return true;
+  }
+  
+  void clear() {
+    while(undo());
   }
   
   void draw()
@@ -102,7 +127,6 @@ class Flake {
   
   void saveOutline(String fileName)
   {
-    // do the work to make the Area!!!
     calcArea();
     if (flakeArea == null) return;
     

@@ -5,8 +5,6 @@ import java.text.*;
 import java.awt.Polygon;
 import java.awt.geom.*;
 
-boolean line = false;
-boolean square = false;
 boolean reflect = true;
 boolean bg = true;
 Poly inProgress = null;
@@ -15,7 +13,13 @@ int saveVal = 0;
 float centerX, centerY, circleSize;
 String saveId;
 Flake editFlake;
-Vector<Flake> bgFlakes;
+Stack<Flake> bgFlakes;
+List<Button> buttons;
+
+Callback increaseCallback, decreaseCallback, mirrorCallback;
+Callback clearCallback, layerCallback;
+Callback undoCallback, redoCallback;
+Callback pdfCallback, svgCallback, pngCallback;
 
 PFont spartanBold;
 
@@ -27,26 +31,134 @@ void setup() {
   circleSize = centerY * 0.98;
   
   editFlake = new Flake();
-  bgFlakes = new Vector<Flake>();
+  bgFlakes = new Stack<Flake>();
   DateFormat fileIdDate = new SimpleDateFormat("yyyyMMdd.HHmm"); 
   saveId = fileIdDate.format(new Date());
   
   spartanBold = createFont("leaguespartan-bold.ttf", 64);
   textFont(spartanBold);
   textAlign(LEFT, BASELINE);
+  
+  increaseCallback = new Callback() {
+    public void callback(Button button) {
+      rotations++;
+      if (rotations > 18) {
+        rotations = 18;
+      }
+    }
+  };
+  
+  decreaseCallback = new Callback() {
+    public void callback(Button button) {
+      rotations--;
+      if (rotations < 1) {
+        rotations = 1;
+      }
+    }
+  };
+  
+  mirrorCallback = new Callback() {
+    public void callback(Button button) {
+      reflect = !reflect;
+      if (button != null) {
+        button.label = reflect ? "Unmirror" : "Mirror";
+      }
+    }
+  };
+  
+  clearCallback = new Callback() {
+    public void callback(Button button) {
+      commitShape();
+      if (bgFlakes.size() > 0) {
+        editFlake = bgFlakes.pop();
+      } else {
+        editFlake.clear();
+      }
+      inProgress = null;
+    }
+  };
+  
+  layerCallback = new Callback() {
+    public void callback(Button button) {
+      commitShape();
+      if (editFlake.isEmpty()) {
+        return;
+      }
+      
+      bgFlakes.push(editFlake);
+      editFlake = new Flake();
+      inProgress = null;
+    }
+  };
+  
+  undoCallback = new Callback() {
+    public void callback(Button button) {
+      // Do we need to finalize the current shape first?
+      commitShape();
+      editFlake.undo();
+    }
+  };
+  
+  redoCallback = new Callback() {
+    public void callback(Button button) {
+      inProgress = null;
+      editFlake.redo();
+    }
+  };
+  
+  pdfCallback = new Callback() {
+    public void callback(Button button) {
+      String flakeId = "flurry" + saveId + "-" + (++saveVal);
+      if (bgFlakes.size() == 0) {
+        editFlake.saveOutline(flakeId + ".pdf");
+      } else {
+        int layerNumber = 0;
+        Flake combinationFlake = new Flake();
+
+        for(Flake bgFlake : bgFlakes) {
+          bgFlake.saveOutline(flakeId + "-layer" + (++layerNumber) + ".pdf");
+          combinationFlake.addFlake(bgFlake);
+        }
+        editFlake.saveOutline(flakeId + "-layer" + (++layerNumber) + ".pdf");
+        
+        combinationFlake.addFlake(editFlake);
+        combinationFlake.saveOutline(flakeId + "-combined.pdf");
+      }
+    }
+  };
+  
+  buttons = new ArrayList<Button>();
+  
+  int symmetryButtonGroupY = height - 50;
+  buttons.add(new Button("+", 10, symmetryButtonGroupY, 40, 40, increaseCallback));
+  buttons.add(new Button("-", 60, symmetryButtonGroupY, 40, 40, decreaseCallback));
+  buttons.add(new Button("Unmirror", 110, symmetryButtonGroupY, 180, 40, mirrorCallback));
+
+  int saveButtonGroupY = symmetryButtonGroupY - 100;
+  buttons.add(new Button("Save (PDF)", 10, saveButtonGroupY, 280, 40, pdfCallback));
+  
+  int layersButtonGroupY = saveButtonGroupY - 200;
+  buttons.add(new Button("New Layer", 10, layersButtonGroupY, 280, 40, layerCallback));
+  buttons.add(new Button("Clear Layer", 10, layersButtonGroupY + 50, 280, 40, clearCallback));
+  buttons.add(new Button("Undo", 10, layersButtonGroupY + 100, 135, 40, undoCallback));
+  buttons.add(new Button("Redo", 155, layersButtonGroupY +100, 135, 40, redoCallback));
+  
 }
 
 void draw() {
   resetMatrix();
   background(0);
+  
+  for(Button button : buttons) {
+    button.draw();
+  }
+  
   translate(centerX, centerY);
   
-  if (bg)
-  {
+  if(bg) {
     noStroke();
     fill(96);
-    for(Flake bgFlake : bgFlakes)
-    {
+    for(Flake bgFlake : bgFlakes) {
       bgFlake.draw();
     }
   }
@@ -57,24 +169,18 @@ void draw() {
 
   editFlake.draw();
   
-  for(int i = rotations - 1; i >= 0; i--)
-  {
-    if (inProgress != null)
-    {
+  for(int i = rotations - 1; i >= 0; i--) {
+    if (inProgress != null) {
       rotate(2.0 * PI / rotations);
-      if (i == 0)
-      {
+      if (i == 0) {
         fill(234,234,255);
-      }
-      else
-      {
+      } else {
         fill(255,255,255,192);
       }
       
       inProgress.draw();
       
-      if (reflect)
-      {
+      if (reflect) {
         pushMatrix();
         scale(-1,1);
         fill(255,255,255,192);
@@ -84,14 +190,12 @@ void draw() {
     }
   }
   
-  if (bg)
-  {
+  if (bg) {
     fill(255,255,255,16);
     noStroke();
     ellipse(0, 0, 2 * circleSize, 2 * circleSize);
     
-    if (rotations > 2 || reflect)
-    {
+    if (rotations > 2 || reflect) {
       fill(255,255,255,32);
       beginShape();
       vertex(0, -circleSize);
@@ -113,6 +217,7 @@ void draw() {
     
     fill(255,255,255,128);
     textSize(18);
+    textAlign(LEFT, BOTTOM);
     text(
       "" + rotations + "-sided"
       + (reflect ? ", mirrored":""),
@@ -125,93 +230,48 @@ void mousePressed() {
   Point clickPoint = new Point((double)(mouseX - centerX), (double)(mouseY - centerY));
   //if (modifier isn't down) clickPoint = snapPoint(clickPoint);
 
-  if (!line && !square)
-  {
+  if (clickPoint.x * clickPoint.x + clickPoint.y * clickPoint.y > circleSize * circleSize) {
+    for (Button button : buttons) {
+      button.click(mouseX, mouseY);
+    }
+    
+    return;
+  }
+  
+  if (inProgress == null) {
     // set the first point    
     inProgress = new Poly();
     inProgress.add(clickPoint);
-    
-    line = true;
-  }
-  else if (line)
-  {
-    if (mouseButton == RIGHT)
-    {
-      line = false;
-      //square = true;
-      
-      editFlake.addShape(inProgress);
-      inProgress = null;
-    }
-    else
-    {
-      // set the second point
+  } else {
+    if (mouseButton == RIGHT) {
+      commitShape();
+    } else {
+      // set the next point
       inProgress.add(clickPoint);
     }
-  }
-  else if (square)
-  {
-    // math :(
   }
 }
 
 void keyPressed() {
-  if (key == 'i' || key == 'I')
-  {
+  if (key == 'i' || key == 'I') {
     bg = false;
     draw();
     
     save("flurry" + saveId + "-" + (++saveVal) + ".png");
     
     bg = true;
-  }
-  else if (key == 'o' || key == 'O')
-  {
-    editFlake.saveOutline("flurry" + saveId + "-" + (++saveVal) + ".pdf");
-  }
-  else if (key == 'p' || key == 'P')
-  {
-    editFlake.savePDF("flurry" + saveId + "-" + (++saveVal) + ".pdf");
-  }
-  else if (key == 's' || key == 'S')
-  {
+  } else if (key == 's' || key == 'S') {
     editFlake.saveSVG("flurry" + saveId + "-" + (++saveVal) + ".svg");
+  } else if (key == 'n' || key == 'n') {
+    layerCallback.callback(null);
+  } else if (key == 'c' || key == 'C') {
+    clearCallback.callback(null);
   }
-  else if (key == 'm' || key == 'M') // mirror
-  {
-    reflect = !reflect;
-  }
-  else if (key == '+')
-  {
-    rotations++;
-  }
-  else if (key == '-' && rotations > 1)
-  {
-    rotations--;
-  }
-  else if (key == 'n' || key == 'N')
-  {
-    bgFlakes.add(editFlake);
+}
 
-    key = 'r';
-  }
-  
-  if (key == 'r' || key == 'R')
-  {
-    if (editFlake.addShapes.size() == 0) bgFlakes = new Vector<Flake>();
-    
-    editFlake = new Flake();
-    line = false;
-    square = false;
+void commitShape() {
+  if (inProgress != null) {
+    editFlake.addShape(inProgress);
     inProgress = null;
-  }
-  
-  if (keyCode == ESC)
-  {
-    keyCode = DELETE;
-    key = ' ';
-    line = false;
-    square = false;
-    inProgress = null;    
   }
 }
