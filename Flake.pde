@@ -6,7 +6,6 @@ class Flake {
   private Vector<Poly> areaShapes;
   
   private ArrayList<double[]> areaPoints;
-  private ArrayList<Line2D.Double> areaSegments;
   private double[] coords = new double[6];
   
   Flake()
@@ -80,7 +79,6 @@ class Flake {
         areaPoints.add(pathIteratorCoords);
     }
     
-    double[] start = new double[3]; // To record where each polygon starts
     Poly currentShape = null;
     
     for (int i = 0; i < areaPoints.size(); i++) {
@@ -90,12 +88,12 @@ class Flake {
       if (currentElement[0] == PathIterator.SEG_MOVETO) {
         currentShape = new Poly();
         currentShape.add(new Point(currentElement[1], currentElement[2]));
-      } 
+      }
   
-      if (currentElement[0] == PathIterator.SEG_LINETO) {
+      if (currentElement[0] == PathIterator.SEG_LINETO && currentShape != null) {
         currentShape.add(new Point(currentElement[1], currentElement[2]));
       }
-      else if (currentElement[0] == PathIterator.SEG_CLOSE) {
+      else if (currentElement[0] == PathIterator.SEG_CLOSE && currentShape != null) {
         areaShapes.add(currentShape);
         currentShape = null;
       }

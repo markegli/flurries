@@ -20,7 +20,7 @@ Vector<Flake> bgFlakes;
 PFont spartanBold;
 
 void setup() {
-  size(1200,800);
+  size(900,600);
   
   centerY = height / 2.0;
   centerX = width - centerY;
