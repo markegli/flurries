@@ -12,6 +12,7 @@ boolean bg = true;
 Poly inProgress = null;
 int rotations = 6;
 int saveVal = 0;
+float centerX, centerY, circleSize;
 String saveId;
 Flake editFlake;
 Vector<Flake> bgFlakes;
@@ -19,7 +20,11 @@ Vector<Flake> bgFlakes;
 PFont spartanBold;
 
 void setup() {
-  size(800,800);
+  size(1200,800);
+  
+  centerY = height / 2.0;
+  centerX = width - centerY;
+  circleSize = centerY * 0.98;
   
   editFlake = new Flake();
   bgFlakes = new Vector<Flake>();
@@ -34,7 +39,7 @@ void setup() {
 void draw() {
   resetMatrix();
   background(0);
-  translate(width / 2.0, height / 2.0);
+  translate(centerX, centerY);
   
   if (bg)
   {
@@ -83,18 +88,26 @@ void draw() {
   {
     fill(255,255,255,16);
     noStroke();
-    ellipse(0, 0, width * 0.98, height *0.98);
+    ellipse(0, 0, 2 * circleSize, 2 * circleSize);
     
-    if (rotations > 2)
+    if (rotations > 2 || reflect)
     {
       fill(255,255,255,32);
       beginShape();
-      vertex(0, -1 * height / 2.0);
+      vertex(0, -circleSize);
       vertex(0, 0);
       float angle = PI / rotations;
       if (!reflect) angle = angle * 2.0;
-      vertex(width / 2.0, -1 * (width / 2.0) / tan(angle));
-      vertex(width / 2.0, -1 * height / 2.0);
+      float tanY = circleSize / tan(angle);
+      float tanX = circleSize;
+      if (tanY > circleSize) {
+        tanX *= circleSize / tanY;
+        tanY = circleSize;
+        vertex(tanX, -tanY);
+      } else {
+        vertex(tanX, -tanY);
+        vertex(circleSize, -circleSize);
+      }
       endShape();
     }
     
@@ -103,13 +116,13 @@ void draw() {
     text(
       "" + rotations + "-sided"
       + (reflect ? ", mirrored":""),
-      -width * 0.48, height * 0.48
+      -circleSize, circleSize
     );
   }
 }
 
 void mousePressed() {  
-  Point clickPoint = new Point((double)(mouseX - width / 2.0), (double)(mouseY - height / 2.0));
+  Point clickPoint = new Point((double)(mouseX - centerX), (double)(mouseY - centerY));
   //if (modifier isn't down) clickPoint = snapPoint(clickPoint);
 
   if (!line && !square)
