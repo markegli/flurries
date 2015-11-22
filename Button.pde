@@ -15,8 +15,11 @@ class Button {
   }
   
   void draw() {
+    fill(48);
+    noStroke();
     rect(x, y, width, height, 10);
     
+    fill(192);
     textSize(textScale * height);
     textAlign(CENTER, TOP);
     text(label, (float)x + width / 2.0, (float)y + ((1.0 - textScale) * height / 2.0));

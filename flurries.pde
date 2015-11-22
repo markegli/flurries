@@ -26,9 +26,8 @@ PFont spartanBold;
 void setup() {
   size(900,600);
   
-  centerY = height / 2.0;
+  centerY = circleSize = height / 2.0;
   centerX = width - centerY;
-  circleSize = centerY * 0.98;
   
   editFlake = new Flake();
   bgFlakes = new Stack<Flake>();
@@ -193,7 +192,7 @@ void draw() {
   if (bg) {
     fill(255,255,255,16);
     noStroke();
-    ellipse(0, 0, 2 * circleSize, 2 * circleSize);
+    ellipse(0, 0, 1.95 * circleSize, 1.95 * circleSize);
     
     if (rotations > 2 || reflect) {
       fill(255,255,255,32);
@@ -215,7 +214,7 @@ void draw() {
       endShape();
     }
     
-    fill(255,255,255,128);
+    fill(128);
     textSize(18);
     textAlign(LEFT, BOTTOM);
     text(
