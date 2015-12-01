@@ -15,9 +15,12 @@ class Button {
   }
   
   void draw() {
-    fill(48);
     noStroke();
-    rect(x, y, width, height, 10);
+    
+    if (callback != null) {
+      fill(48);
+      rect(x, y, width, height, 10);
+    }
     
     fill(192);
     textSize(textScale * height);
@@ -26,7 +29,7 @@ class Button {
   }
   
   void click(int mouseX, int mouseY) {
-    if (mouseX < x || mouseX > x + width || mouseY < y || mouseY > y + height) {
+    if (!contains(mouseX, mouseY)) {
       return;
     }
     
@@ -34,7 +37,11 @@ class Button {
     if (callback != null) {
       callback.callback(this);
     }
-  }  
+  }
+  
+  boolean contains(int mouseX, int mouseY) {
+    return !(mouseX < x || mouseX > x + width || mouseY < y || mouseY > y + height);
+  }
 }
 
 abstract class Callback {

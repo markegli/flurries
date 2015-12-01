@@ -15,11 +15,13 @@ String saveId;
 Flake editFlake;
 Stack<Flake> bgFlakes;
 List<Button> buttons;
+TextBox toolDescription;
 
 Callback increaseCallback, decreaseCallback, mirrorCallback;
 Callback clearCallback, layerCallback;
 Callback undoCallback, redoCallback;
 Callback pdfCallback, svgCallback, pngCallback;
+Callback quitCallback;
 
 PFont spartanBold;
 
@@ -126,6 +128,12 @@ void setup() {
     }
   };
   
+  quitCallback = new Callback() {
+    public void callback(Button button) {
+      exit();
+    }
+  };
+  
   buttons = new ArrayList<Button>();
   
   int symmetryButtonGroupY = height - 50;
@@ -133,24 +141,47 @@ void setup() {
   buttons.add(new Button("-", 60, symmetryButtonGroupY, 40, 40, decreaseCallback));
   buttons.add(new Button("Unmirror", 110, symmetryButtonGroupY, 180, 40, mirrorCallback));
 
-  int saveButtonGroupY = symmetryButtonGroupY - 100;
+  int saveButtonGroupY = symmetryButtonGroupY - 80;
   buttons.add(new Button("Save (PDF)", 10, saveButtonGroupY, 280, 40, pdfCallback));
   
-  int layersButtonGroupY = saveButtonGroupY - 200;
+  int layersButtonGroupY = saveButtonGroupY - 160;
   buttons.add(new Button("New Layer", 10, layersButtonGroupY, 280, 40, layerCallback));
   buttons.add(new Button("Clear Layer", 10, layersButtonGroupY + 50, 280, 40, clearCallback));
   buttons.add(new Button("Undo", 10, layersButtonGroupY + 100, 135, 40, undoCallback));
-  buttons.add(new Button("Redo", 155, layersButtonGroupY +100, 135, 40, redoCallback));
+  buttons.add(new Button("Redo", 155, layersButtonGroupY + 100, 135, 40, redoCallback));
   
+  // Title Button
+  buttons.add(new Button("Flurries", 10, 10, 280, 100, null));
+  
+  int toolsButtonGroupY = 130;
+  toolDescription = new TextBox(10, toolsButtonGroupY, 280, 90,
+    "Left click to begin a new shape.\nLeft click to continue shape.\nRight click to accept shape.");
+  
+  buttons.add(new Button("Quit", width - 100, height - 50, 90, 40, quitCallback));
 }
 
 void draw() {
+  // Default cursor appearance.
+  int cursorType = ARROW;
+  
+  Point circlePoint = new Point((double)(mouseX - centerX), (double)(mouseY - centerY));
+  //if (modifier isn't down) clickPoint = snapPoint(clickPoint);
+
+  if (circlePoint.x * circlePoint.x + circlePoint.y * circlePoint.y <= circleSize * circleSize) {
+    cursorType = CROSS;
+  }
+  
   resetMatrix();
   background(0);
   
   for(Button button : buttons) {
     button.draw();
+    if (button.callback != null && button.contains(mouseX, mouseY)) {
+      cursorType = HAND;
+    }
   }
+  
+  toolDescription.draw();
   
   translate(centerX, centerY);
   
@@ -223,6 +254,9 @@ void draw() {
       -circleSize, circleSize
     );
   }
+  
+  // Set cursor.
+  cursor(cursorType);
 }
 
 void mousePressed() {  
@@ -265,6 +299,9 @@ void keyPressed() {
     layerCallback.callback(null);
   } else if (key == 'c' || key == 'C') {
     clearCallback.callback(null);
+  } else if (key == ESC) {
+    // Don't quit on escape key!
+    key = ENTER;
   }
 }
 
