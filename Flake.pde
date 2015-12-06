@@ -122,10 +122,7 @@ class Flake {
     calcArea();
     if (flakeArea == null) return;
     
-    pushMatrix();
-    resetMatrix();
-
-    RawDXF dxfWritter = new RawDXF();
+    EgliDXF dxfWritter = new EgliDXF();
     dxfWritter.setLayer(0);
     dxfWritter.setPath(sketchPath(fileName));
     dxfWritter.beginDraw();
@@ -140,31 +137,23 @@ class Flake {
     }
     
     dxfWritter.dispose();
-    
-    popMatrix();
   }
   
-  void savePdfOutline(String fileName) {
+  void savePdfOutline(PGraphicsPDF pdf) {
     calcArea();
     if (flakeArea == null) return;
     
-    pushMatrix();
-    resetMatrix();
+    pdf.resetMatrix();
+    pdf.translate(pdf.width / 2, pdf.height / 2);
 
-    beginRecord(PDF, fileName);
-    translate(width/2,height/2);
-
-    noFill();
-    stroke(0);
-    strokeWeight(1);
+    pdf.noFill();
+    pdf.stroke(0);
+    pdf.strokeWeight(1);
     
     // draw all the line segments
     for (Poly areaShape : areaShapes) {
-      areaShape.draw();
+      areaShape.draw(pdf);
     }
-    
-    endRecord();
-    popMatrix();
   }
 
   public void saveSvgOutline(String fileName) {

@@ -1,7 +1,7 @@
 import java.util.*;
 import processing.pdf.*;
-import processing.dxf.*;
 import java.text.*;
+import java.io.*;
 
 import java.awt.Polygon;
 import java.awt.geom.*;
@@ -132,21 +132,29 @@ void setup() {
   pdfCallback = new Callback() {
     public void callback(Button button) {
       String flakeId = "flurry" + saveId + "-" + (++saveVal);
+      
+      PGraphicsPDF pdf = (PGraphicsPDF)createGraphics(ceil(circleSize) * 2, ceil(circleSize) * 2, PDF, flakeId + ".pdf");
+      pdf.beginDraw();
+      
       if (bgFlakes.size() == 0) {
-        editFlake.savePdfOutline(flakeId + ".pdf");
+        editFlake.savePdfOutline(pdf);
       } else {
-        int layerNumber = 0;
         Flake combinationFlake = new Flake();
 
         for(Flake bgFlake : bgFlakes) {
-          bgFlake.savePdfOutline(flakeId + "-layer" + (++layerNumber) + ".pdf");
+          bgFlake.savePdfOutline(pdf);
           combinationFlake.addFlake(bgFlake);
+          pdf.nextPage();
         }
-        editFlake.savePdfOutline(flakeId + "-layer" + (++layerNumber) + ".pdf");
+        editFlake.savePdfOutline(pdf);
+        pdf.nextPage();
         
         combinationFlake.addFlake(editFlake);
-        combinationFlake.savePdfOutline(flakeId + "-combined.pdf");
+        combinationFlake.savePdfOutline(pdf);
       }
+      
+      pdf.endDraw();
+      pdf.dispose();
     }
   };
   
