@@ -1,5 +1,6 @@
 import java.util.*;
 import processing.pdf.*;
+import processing.dxf.*;
 import java.text.*;
 
 import java.awt.Polygon;
@@ -20,7 +21,7 @@ TextBox toolDescription;
 Callback increaseCallback, decreaseCallback, mirrorCallback;
 Callback clearCallback, layerCallback;
 Callback undoCallback, redoCallback;
-Callback pdfCallback, svgCallback, pngCallback;
+Callback pdfCallback, dxfCallback; // possible additions: svgCallback, pngCallback
 Callback quitCallback;
 
 PFont spartanBold;
@@ -107,23 +108,44 @@ void setup() {
     }
   };
   
-  pdfCallback = new Callback() {
+  dxfCallback = new Callback() {
     public void callback(Button button) {
       String flakeId = "flurry" + saveId + "-" + (++saveVal);
       if (bgFlakes.size() == 0) {
-        editFlake.saveOutline(flakeId + ".pdf");
+        editFlake.saveDxfOutline(flakeId + ".dxf");
       } else {
         int layerNumber = 0;
         Flake combinationFlake = new Flake();
 
         for(Flake bgFlake : bgFlakes) {
-          bgFlake.saveOutline(flakeId + "-layer" + (++layerNumber) + ".pdf");
+          bgFlake.saveDxfOutline(flakeId + "-layer" + (++layerNumber) + ".dxf");
           combinationFlake.addFlake(bgFlake);
         }
-        editFlake.saveOutline(flakeId + "-layer" + (++layerNumber) + ".pdf");
+        editFlake.saveDxfOutline(flakeId + "-layer" + (++layerNumber) + ".dxf");
         
         combinationFlake.addFlake(editFlake);
-        combinationFlake.saveOutline(flakeId + "-combined.pdf");
+        combinationFlake.saveDxfOutline(flakeId + "-combined.dxf");
+      }
+    }
+  };
+  
+  pdfCallback = new Callback() {
+    public void callback(Button button) {
+      String flakeId = "flurry" + saveId + "-" + (++saveVal);
+      if (bgFlakes.size() == 0) {
+        editFlake.savePdfOutline(flakeId + ".pdf");
+      } else {
+        int layerNumber = 0;
+        Flake combinationFlake = new Flake();
+
+        for(Flake bgFlake : bgFlakes) {
+          bgFlake.savePdfOutline(flakeId + "-layer" + (++layerNumber) + ".pdf");
+          combinationFlake.addFlake(bgFlake);
+        }
+        editFlake.savePdfOutline(flakeId + "-layer" + (++layerNumber) + ".pdf");
+        
+        combinationFlake.addFlake(editFlake);
+        combinationFlake.savePdfOutline(flakeId + "-combined.pdf");
       }
     }
   };
@@ -141,8 +163,9 @@ void setup() {
   buttons.add(new Button("-", 60, symmetryButtonGroupY, 40, 40, decreaseCallback));
   buttons.add(new Button("Unmirror", 110, symmetryButtonGroupY, 180, 40, mirrorCallback));
 
-  int saveButtonGroupY = symmetryButtonGroupY - 80;
+  int saveButtonGroupY = symmetryButtonGroupY - 130;
   buttons.add(new Button("Save (PDF)", 10, saveButtonGroupY, 280, 40, pdfCallback));
+  buttons.add(new Button("Save (DXF)", 10, saveButtonGroupY + 50, 280, 40, dxfCallback));
   
   int layersButtonGroupY = saveButtonGroupY - 160;
   buttons.add(new Button("New Layer", 10, layersButtonGroupY, 280, 40, layerCallback));
@@ -251,7 +274,7 @@ void draw() {
     text(
       "" + rotations + "-sided"
       + (reflect ? ", mirrored":""),
-      -circleSize, circleSize
+      -circleSize + 5, circleSize - 5
     );
   }
   
@@ -293,8 +316,6 @@ void keyPressed() {
     save("flurry" + saveId + "-" + (++saveVal) + ".png");
     
     bg = true;
-  } else if (key == 's' || key == 'S') {
-    editFlake.saveSVG("flurry" + saveId + "-" + (++saveVal) + ".svg");
   } else if (key == 'n' || key == 'n') {
     layerCallback.callback(null);
   } else if (key == 'c' || key == 'C') {

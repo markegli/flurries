@@ -49,15 +49,11 @@ class Flake {
     while(undo());
   }
   
-  void draw()
-  {
-    for(int i = 0; i < rotations; i++)
-    {
-      for(Poly drawShape : addShapes)
-      {
+  void draw() {
+    for (int i = 0; i < rotations; i++) {
+      for (Poly drawShape : addShapes) {
         drawShape.draw();
-        if (reflect)
-        {
+        if (reflect) {
           pushMatrix();
           scale(-1,1);
           drawShape.draw();
@@ -68,25 +64,23 @@ class Flake {
     }
   }
   
-  void calcArea()
-  {
-    if (addShapes.size() == 0)
-    {
+  void calcArea() {
+    if (addShapes.size() == 0) {
       flakeArea = null;
       return;
     }
     
     flakeArea = new Area(addShapes.get(0).getShape());
-    for (int i = 1; i < addShapes.size(); i++)
-    {
+    for (int i = 1; i < addShapes.size(); i++) {
       flakeArea.add(new Area(addShapes.get(i).getShape()));
     }
     
-    if (reflect) flakeArea.add(flakeArea.createTransformedArea(AffineTransform.getScaleInstance(-1, 1)));
+    if (reflect) {
+      flakeArea.add(flakeArea.createTransformedArea(AffineTransform.getScaleInstance(-1, 1)));
+    }
     
     Area rotateArea = (Area)flakeArea.clone();
-    for (int i = 1; i < rotations; i++)
-    {
+    for (int i = 1; i < rotations; i++) {
       flakeArea.add(rotateArea.createTransformedArea(AffineTransform.getRotateInstance(2.0d * PI * i / rotations)));
     }
     
@@ -117,23 +111,45 @@ class Flake {
   
       if (currentElement[0] == PathIterator.SEG_LINETO && currentShape != null) {
         currentShape.add(new Point(currentElement[1], currentElement[2]));
-      }
-      else if (currentElement[0] == PathIterator.SEG_CLOSE && currentShape != null) {
+      } else if (currentElement[0] == PathIterator.SEG_CLOSE && currentShape != null) {
         areaShapes.add(currentShape);
         currentShape = null;
       }
     }
   }
   
-  void saveOutline(String fileName)
-  {
+  void saveDxfOutline(String fileName) {
     calcArea();
     if (flakeArea == null) return;
     
     pushMatrix();
     resetMatrix();
 
-    background(255);
+    RawDXF dxfWritter = new RawDXF();
+    dxfWritter.setLayer(0);
+    dxfWritter.setPath(sketchPath(fileName));
+    dxfWritter.beginDraw();
+    
+    dxfWritter.noFill();
+    dxfWritter.stroke(0);
+    dxfWritter.strokeWeight(1);
+    
+    // draw all the line segments
+    for (Poly areaShape : areaShapes) {
+      areaShape.draw(dxfWritter);
+    }
+    
+    dxfWritter.dispose();
+    
+    popMatrix();
+  }
+  
+  void savePdfOutline(String fileName) {
+    calcArea();
+    if (flakeArea == null) return;
+    
+    pushMatrix();
+    resetMatrix();
 
     beginRecord(PDF, fileName);
     translate(width/2,height/2);
@@ -143,8 +159,7 @@ class Flake {
     strokeWeight(1);
     
     // draw all the line segments
-    for(Poly areaShape : areaShapes)
-    {
+    for (Poly areaShape : areaShapes) {
       areaShape.draw();
     }
     
@@ -152,34 +167,17 @@ class Flake {
     popMatrix();
   }
 
-  void savePDF(String fileName)
-  {
-    pushMatrix();
-    resetMatrix();
-
-    beginRecord(PDF, fileName);
-    translate(width/2,height/2);
-
-    background(255);
-    noStroke();
-    fill(0);
-    
-    this.draw();
-    
-    endRecord();
-    popMatrix();
-  }
-  
-  public void saveSVG(String fileName) {
+  public void saveSvgOutline(String fileName) {
     calcArea();
     if (flakeArea == null) return;
     
     String svg = "<?xml version=\"1.0\" standalone=\"yes\"?>";
     svg += "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">";
     svg += "<svg width=\"" + width + "px\" height=\"" + height + "px\" xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\">";
-    for(Poly areaShape : areaShapes)
-    {
-      if (areaShape.points.size() == 0) continue;
+    for (Poly areaShape : areaShapes) {
+      if (areaShape.points.size() == 0) {
+        continue;
+      }
       
       svg += "<path d=\"";
       svg += "M"+areaShape.points.get(0).x+","+areaShape.points.get(0).y+" ";
