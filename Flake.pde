@@ -156,13 +156,13 @@ class Flake {
     }
   }
 
-  public void saveSvgOutline(String fileName) {
+  public void saveSvgOutline(String fileName, int radius) {
     calcArea();
     if (flakeArea == null) return;
     
     String svg = "<?xml version=\"1.0\" standalone=\"yes\"?>";
     svg += "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">";
-    svg += "<svg width=\"" + width + "px\" height=\"" + height + "px\" xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\">";
+    svg += "<svg width=\"" + (2 * radius) + "px\" height=\"" + (2 * radius) + "px\" xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\">";
     for (Poly areaShape : areaShapes) {
       if (areaShape.points.size() == 0) {
         continue;
@@ -170,12 +170,17 @@ class Flake {
       
       svg += "<path d=\"";
       svg += "M"+areaShape.points.get(0).x+","+areaShape.points.get(0).y+" ";
+      Point previousPoint = null;
       for(Point areaPoint : areaShape.points) {
-         svg += "L"+areaPoint.x+","+areaPoint.y;
+        // Avoid drawing lines with no length
+        if (!areaPoint.equals(previousPoint)) {
+          svg += "L"+areaPoint.x+","+areaPoint.y;
+        }
+        previousPoint = areaPoint;
       }
       svg += "Z";
       
-      svg += "\" stroke=\"#000\" fill-opacity=\"0\" transform=\"translate(" + (width / 2.0) + "," + (height / 2.0) + ")\" />";
+      svg += "\" stroke=\"#000\" fill-opacity=\"0\" transform=\"translate(" + radius + "," + radius + ")\" />";
     }
     svg +="</svg>";
     //var blob = new Blob([svg], {type: "text/plain;charset=utf-8"});

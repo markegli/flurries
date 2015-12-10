@@ -29,10 +29,15 @@ class Poly {
     } else if (points.size() > 2) {
       // draw the shape
       pg.beginShape();
+      Point previousPoint = null;
       for (Point shapePoint : points) {
-        pg.vertex((float)shapePoint.x, (float)shapePoint.y);
+        // Avoid drawing lines with no length for Silhouette DXF import.
+        if (!shapePoint.equals(previousPoint)) {
+          pg.vertex((float)shapePoint.x, (float)shapePoint.y);
+        }
+        previousPoint = shapePoint;
       }
-      pg.endShape(CLOSE);
+      pg.endShape();
     }
   }
 }

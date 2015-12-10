@@ -2,6 +2,7 @@ import java.util.*;
 import processing.pdf.*;
 import java.text.*;
 import java.io.*;
+import java.util.concurrent.TimeUnit;
 
 import java.awt.Polygon;
 import java.awt.geom.*;
@@ -21,10 +22,14 @@ TextBox toolDescription;
 Callback increaseCallback, decreaseCallback, mirrorCallback;
 Callback clearCallback, layerCallback;
 Callback undoCallback, redoCallback;
-Callback pdfCallback, dxfCallback; // possible additions: svgCallback, pngCallback
+Callback saveCallback;
 Callback quitCallback;
 
 PFont spartanBold;
+
+Button saveButton;
+String saveString = "Save Snowflake";
+int saveTimeout = 0;
 
 void setup() {
   size(900,600);
@@ -108,53 +113,54 @@ void setup() {
     }
   };
   
-  dxfCallback = new Callback() {
+  saveCallback = new Callback() {
     public void callback(Button button) {
       String flakeId = "flurry" + saveId + "-" + (++saveVal);
-      if (bgFlakes.size() == 0) {
-        editFlake.saveDxfOutline(flakeId + ".dxf");
-      } else {
-        int layerNumber = 0;
-        Flake combinationFlake = new Flake();
-
-        for(Flake bgFlake : bgFlakes) {
-          bgFlake.saveDxfOutline(flakeId + "-layer" + (++layerNumber) + ".dxf");
-          combinationFlake.addFlake(bgFlake);
-        }
-        editFlake.saveDxfOutline(flakeId + "-layer" + (++layerNumber) + ".dxf");
-        
-        combinationFlake.addFlake(editFlake);
-        combinationFlake.saveDxfOutline(flakeId + "-combined.dxf");
-      }
-    }
-  };
-  
-  pdfCallback = new Callback() {
-    public void callback(Button button) {
-      String flakeId = "flurry" + saveId + "-" + (++saveVal);
+      int exportRadius = ceil(circleSize);
       
-      PGraphicsPDF pdf = (PGraphicsPDF)createGraphics(ceil(circleSize) * 2, ceil(circleSize) * 2, PDF, flakeId + ".pdf");
+      // PDF
+      PGraphicsPDF pdf = (PGraphicsPDF)createGraphics(exportRadius * 2, exportRadius * 2, PDF, flakeId + "/snowflake.pdf");
       pdf.beginDraw();
       
-      if (bgFlakes.size() == 0) {
-        editFlake.savePdfOutline(pdf);
-      } else {
-        Flake combinationFlake = new Flake();
-
-        for(Flake bgFlake : bgFlakes) {
-          bgFlake.savePdfOutline(pdf);
-          combinationFlake.addFlake(bgFlake);
-          pdf.nextPage();
-        }
+      Flake combinationFlake = new Flake();
+      combinationFlake.addFlake(editFlake);
+      
+      for(Flake bgFlake : bgFlakes) {
+        bgFlake.savePdfOutline(pdf);
+        combinationFlake.addFlake(bgFlake);
+        pdf.nextPage();
+      }
+      
+      if (bgFlakes.size() > 0) {
         editFlake.savePdfOutline(pdf);
         pdf.nextPage();
-        
-        combinationFlake.addFlake(editFlake);
-        combinationFlake.savePdfOutline(pdf);
       }
+      
+      combinationFlake.savePdfOutline(pdf);
       
       pdf.endDraw();
       pdf.dispose();
+
+      int layerNumber = 0;
+      for(Flake bgFlake : bgFlakes) {
+        layerNumber++;
+        bgFlake.saveDxfOutline(flakeId + "/layer" + layerNumber + ".dxf");
+        bgFlake.saveSvgOutline(flakeId + "/layer" + layerNumber + ".svg", exportRadius);
+        combinationFlake.addFlake(bgFlake);
+      }
+      
+      if (bgFlakes.size() > 0) {
+        layerNumber++;
+        editFlake.saveDxfOutline(flakeId + "/layer" + layerNumber + ".dxf");
+        editFlake.saveSvgOutline(flakeId + "/layer" + layerNumber + ".svg", exportRadius);
+      }
+        
+      combinationFlake.saveDxfOutline(flakeId + "/snowflake.dxf");
+      combinationFlake.saveSvgOutline(flakeId + "/snowflake.svg", exportRadius);
+      
+      // Update the button to indicate that the snowflake was saved.
+      button.label = "(Saved)";
+      saveTimeout = 30; // Leave up message for thirty frames.
     }
   };
   
@@ -171,9 +177,9 @@ void setup() {
   buttons.add(new Button("-", 60, symmetryButtonGroupY, 40, 40, decreaseCallback));
   buttons.add(new Button("Unmirror", 110, symmetryButtonGroupY, 180, 40, mirrorCallback));
 
-  int saveButtonGroupY = symmetryButtonGroupY - 130;
-  buttons.add(new Button("Save (PDF)", 10, saveButtonGroupY, 280, 40, pdfCallback));
-  buttons.add(new Button("Save (DXF)", 10, saveButtonGroupY + 50, 280, 40, dxfCallback));
+  int saveButtonGroupY = symmetryButtonGroupY - 80;
+  saveButton = new Button(saveString, 10, saveButtonGroupY, 280, 40, saveCallback);
+  buttons.add(saveButton);
   
   int layersButtonGroupY = saveButtonGroupY - 160;
   buttons.add(new Button("New Layer", 10, layersButtonGroupY, 280, 40, layerCallback));
@@ -192,6 +198,14 @@ void setup() {
 }
 
 void draw() {
+  // Handle save button text.
+  if (saveTimeout > 0) {
+    saveTimeout--;
+    if (saveTimeout == 0) {
+      saveButton.label = saveString;
+    }
+  }
+  
   // Default cursor appearance.
   int cursorType = ARROW;
   
