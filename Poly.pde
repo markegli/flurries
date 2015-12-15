@@ -37,6 +37,9 @@ class Poly {
         }
         previousPoint = shapePoint;
       }
+      if (previousPoint == null || !previousPoint.equals(points.get(0))) {
+          pg.vertex((float)points.get(0).x, (float)points.get(0).y);
+      }
       pg.endShape();
     }
   }
